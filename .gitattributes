@@ -1,2 +1,412 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+SIGN IN
+Vehicle Tracking System Based on GPS and GSM
+Vehicle Tracking System Based on GPS and GSM
+In this tutorial, you are going to learn how to make a vehicle tracking system using GPS and Arduino.
+
+gpsgsmhome automation
+54,225 VIEWS20 COMMENTS43 RESPECTS
+COMPONENTS AND SUPPLIES
+Ph a000066 iso (1) ztbmubhmho	
+Arduino UNO
+×	1	
+GSM sim800/900 module
+×	1	
+NEO GPS 6M
+×	1	
+16 x 2 LCD
+×	1	
+LCD Breakout Board
+×	1	
+UTSOURCE jumper wire
+×	1	
+ABOUT THIS PROJECT
+Arduino-based vehicle tracking system using global positioning system (GPS) and global system using GSM modules. GSM modem with a SIM card used here uses for the communication technique. The system can be installed or hidden in your vehicle. After installing this circuit, you can easily track your stolen vehicle using a mobile phone. you can also use this application to track the school/college bus.
+
+Step 1: Connect the TX and RX Pin of the GPS to D3 and D4
+I have used software serial for communicating with GPS. so connect the connect the TX of the gps to D4 of the arduino board. RX to D3 of the arduino board.
+
+Connect the TX and RX of the GSM module to the RX and TX of the arduino board
+
+Step 2: Connect the LCD to the D8 to D13 of the Arduino Board
+I strongly recommend to buy a LCD breakout board to connect the LCD.
+
+LCD - Arduino
+
+RS - D13,
+
+EN - D12,
+
+D4 - D11,
+
+D5 - D10,
+
+D6 - D9,
+
+D7 - D8
+
+Step 3: Add Tiny GPS Library
+Add tiny gps library before making the code.
+
+download the library from the website, add through add zip to library, browse it and add it.
+
+Step 4: Download the Arduino Code From the Attachment
+Note: before downloading, change the mobile number to receive the SMS.
+
+Step 5: Type "TRACK VEHICLE" to the Sim on the Sim Module
+Switch ON the hardware. Download the code. check the Network range on the GSM module with the blinking of the network led.
+
+Type "TRACK VEHICLE" as SMS and send to the sim module in the GSM Modem.
+
+Step 6: You Can Receive the Response SMS From GSM Module
+Now you can receive the GPS co-ordinates as SMS. The sms consist of web link which will redirect to the GOOGLE MAP
+
+Step 7: Click the Weblink to Track the Vehicle
+Finally you can track the vehicle in the google map.. Enjoy... for queries.. comment
+
+CODE
+Tracking_tinygps.inoArduino
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include<LiquidCrystal.h>
+LiquidCrystal lcd(13, 12, 11, 10, 9, 8);
+
+static const int RXPin = 4, TXPin = 3;
+static const uint32_t GPSBaud = 9600;
+// The TinyGPS++ object
+TinyGPSPlus gps;
+int temp=0,i;
+// The serial connection to the GPS device
+SoftwareSerial ss(RXPin, TXPin);
+String stringVal = "";
+void setup(){
+  Serial.begin(9600);
+  ss.begin(GPSBaud);
+  lcd.begin(16,2);
+  pinMode(13,OUTPUT);
+  digitalWrite(13,LOW);
+  lcd.print("Vehicle Tracking");
+  lcd.setCursor(0,1);
+  lcd.print("    System      ");
+  delay(2000);
+  gsm_init();
+  lcd.clear();  
+  Serial.println("AT+CNMI=2,2,0,0,0");
+  lcd.print("GPS Initializing");
+  lcd.setCursor(0,1);
+  lcd.print("  No GPS Range  "); 
+  delay(2000);
+  lcd.clear();
+  lcd.print("GPS Range Found");
+  lcd.setCursor(0,1);
+  lcd.print("GPS is Ready");
+  delay(2000);
+  lcd.clear();
+  lcd.print("System Ready");
+  temp=0;
+}
+
+void loop()
+{ 
+serialEvent();
+
+      while(temp)
+      {
+        while (ss.available() > 0)
+        {
+          gps.encode(ss.read());
+                if (gps.location.isUpdated())
+                {
+                 temp=0;
+                 digitalWrite(13,HIGH);
+                 tracking();
+                } 
+          if(!temp)
+          break;  
+        }
+      }
+      digitalWrite(13,LOW);
+}
+void serialEvent()
+{
+  while(Serial.available()>0)
+  { 
+    if(Serial.find("Track Vehicle"))
+    {
+      temp=1;
+      break;
+    }
+    else
+    {
+    temp=0;
+    }
+  }
+}
+void gsm_init()
+{
+  lcd.clear();
+  lcd.print("Finding Module..");
+  boolean at_flag=1;
+  while(at_flag)
+  {
+    Serial.println("AT");
+    delay(1);
+    while(Serial.available()>0)
+    {
+      if(Serial.find("OK"))
+      at_flag=0;
+    }
+    
+    delay(1000);
+  }
+  lcd.clear();
+  lcd.print("Module Connected..");
+  delay(1000);
+  lcd.clear();
+  lcd.print("Disabling ECHO");
+  boolean echo_flag=1;
+  while(echo_flag)
+  {
+    Serial.println("ATE0");
+    while(Serial.available()>0)
+    {
+      if(Serial.find("OK"))
+      echo_flag=0;
+    }
+    delay(1000);
+  }
+  lcd.clear();
+  lcd.print("Echo OFF");
+  delay(1000);
+  lcd.clear();
+  lcd.print("Finding Network..");
+  boolean net_flag=1;
+  while(net_flag)
+  {
+    Serial.println("AT+CPIN?");
+    while(Serial.available()>0)
+    {
+      if(Serial.find("+CPIN: READY"))
+      net_flag=0;
+    }
+    delay(1000);
+  }
+  lcd.clear();
+  lcd.print("Network Found..");
+  
+  delay(1000);
+  lcd.clear();
+}
+void init_sms()
+{
+  Serial.println("AT+CMGF=1");
+  delay(400);
+  Serial.println("AT+CMGS=\"8825737586\"");   // use your 10 digit cell no. here
+  delay(400);
+}
+void send_data(String message)
+{
+  Serial.print(message);
+ delay(200);
+}
+void send_sms()
+{
+  Serial.write(26);
+}
+void lcd_status()
+{
+  lcd.clear();
+  lcd.print("Message Sent");
+  delay(2000);
+  lcd.clear();
+  lcd.print("System Ready");
+  return;
+}
+void tracking()
+{
+    init_sms();
+    send_data("Vehicle Tracking Alert:");
+    Serial.println(" "); 
+    send_data("Your Vehicle Current Location is:");
+    Serial.println(" "); 
+    Serial.print("Latitude: ");
+    Serial.print(gps.location.lat(), 6);
+    Serial.print("\n Longitude: ");
+    Serial.println(gps.location.lng(), 6);
+
+   // https://www.google.com/maps/@8.2630696,77.3022699,14z
+   Serial.print("https://www.google.com/maps/@");
+   Serial.print(gps.location.lat(), 6);
+   Serial.print(',');
+   Serial.print(gps.location.lng(), 6);
+   Serial.print(",14z");
+    send_sms();
+    delay(2000);
+    lcd_status();
+}
+COMMENTS
+Please log in or sign up to comment.
+
+miladk989
+miladk989
+2 years ago
+wow!!! very impressive thanks for cool stuff
+
+Snoes
+Snoes
+2 years ago
+Can someone tell me where the SIM passworth must be in the code.
+These are four numbers, but can not find where set this in the code.
+Without that code the SIM900 can still send a message, I think.
+
+Silviu Tudose
+Silviu Tudose
+2 years ago
+The easiest way would be to disable the SIM password.Insert the SIM in a phone and disable it.
+
+MAITRAYEE
+MAITRAYEE
+2 years ago
+i am interested to make this project.
+
+Rumarsel
+Rumarsel
+2 years ago
+I like this project, please can I use SIM800L?
+
+jacobdavidkelly
+jacobdavidkelly
+2 years ago
+where is the receiver part? Can I place a receiver onto a person and track them instead of a vehicle?
+
+NaveenNV23
+NaveenNV23
+a year ago
+I built the hardware part of this project successfully. When I run it in serial monitor it runs but the problem is when I'm sending "Track vehicle"the message is received by my sim and it does not return any output value like latitude and longitude.
+
+Chrisp49
+Chrisp49
+a year ago
+Hi - not sure if you are still taking questions on this great project. I have built it without the LCD panel - I just added in some extra print lines to serial monitor. It works most of the time but the issue I have is the programme not always recognising the 'Track Vehicle' command. Is there any way of seeing on the serial monitor what instruction has actually been received by the SIM800L module? Also can you tell me why I need to disconnect the serial TX from the SIM800L when I upload a sketch is it because there is interference / blocking and therefore the Arduino cannot upload the sketch correctly. Thanks and once again great project.
+
+Firdosh
+Firdosh
+a year ago
+This guy never bothers to answer any one so do not waste your time with this project
+
+arutsch
+arutsch
+7 months ago
+These
+GSM SIM800 / 900 modules, where can I buy them?
+And if not exactly the same, which one?
+
+frexryan
+frexryan
+6 months ago
+Lazada / Shopee
+
+frexryan
+frexryan
+6 months ago
+how to connect this in PHP MySQL?
+
+juggie
+juggie
+5 months ago
+can i get whole report document for this project
+
+juggie
+juggie
+5 months ago
+can i get report document for this project?
+
+janakj
+janakj
+4 months ago
+How to connect lcd break out board to lcd display..it's my huge doubt please reply sir....
+
+remartm2
+remartm2
+3 months ago
+what is the system that you installed in your vehicle?
+
+eddytee
+eddytee
+3 months ago
+This is very helpful! Thanks for this! You may also want to look up Infiniti tracking as they are one of the best when it comes to GPS tracking services. https://www.infinititracking.co.uk/product-category/car-trackers/
+
+ceejay25
+ceejay25
+2 months ago
+can we send the sms to multiple phone number?
+
+ceejay25
+ceejay25
+2 months ago
+btw. I am a beginner and this was an awesome project
+
+arshad91
+arshad91
+2 months ago
+can i use other gsm module..does this program works on that
+
+AUTHOR
+Utsource
+Muchika
+6 PROJECTS27 FOLLOWERS
+PUBLISHED ON
+December 16, 2019
+MEMBERS WHO RESPECT THIS PROJECT
+DefaultDefaultManoranjan2050PhotoDefaultDefaultDefaultDefault
+and 35 others
+
+SIMILAR PROJECTS YOU MIGHT LIKE
+GPS Tracking System for Vehicles
+We built this to help our farmer friend in Thailand track his truck to prevent rice theft.
+
+GPS Tracking System for Vehicles
+Project showcase by Sustainable Living Lab
+
+28,825 VIEWS3 COMMENTS72 RESPECTS
+GPS Tracking System with Arduino Uno and Digilent PmodGPS
+This project is a GPS tracking system with LCD display using an Arduino Uno and a Digilent PmodGPS.
+
+GPS Tracking System with Arduino Uno and Digilent...
+Project tutorial by Ian Etheridge
+
+13,563 VIEWS1 COMMENT29 RESPECTS
+RFID Based Attendance System Using Arduino
+An attendance system using Arduino, MFRC522, and GSM module with a data management GUI created on C#.
+
+RFID Based Attendance System Using Arduino
+Project tutorial by Asim Zulfiqar and High Voltages
+
+31,289 VIEWS3 COMMENTS29 RESPECTS
+Sun Tracking Solar System
+This system is to get 100% sun energy. In this system solar panel will move in the direction of sun from sun rise to sun set.
+
+Sun Tracking Solar System
+Project tutorial by Mayur Rabadiya
+
+17,783 VIEWS10 COMMENTS29 RESPECTS
+Live Tracking and Accident Detection System
+If an accident or any gas or smoke leakage is detected, it notifies through call and through Blynk app.
+
+Live Tracking and Accident Detection System
+Project tutorial by Jayashree
+
+15,442 VIEWS4 COMMENTS29 RESPECTS
+GSM based Home Automation
+This can hep you to access your home when you are out . You can switch on and off the home appliances from anywhere.
+
+GSM based Home Automation
+Project tutorial by Team Brink.IO
+
+47,265 VIEWS56 COMMENTS81 RESPECTS
+Powered by
+
+SEARCH
+Add project
+Sign up / Login
